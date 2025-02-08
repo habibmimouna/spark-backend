@@ -3,7 +3,7 @@ import { authenticateToken } from '../middleware/auth';
 import { getAppointments, addAppointment, updateAppointment, deleteAppointment } from '../controllers/appointmentController';
 
 const router = express.Router();
-router.use(authenticateToken);
+router.use(authenticateToken as express.RequestHandler);
 
 router.get('/', getAppointments);
 router.post('/', addAppointment);
