@@ -5,29 +5,28 @@ import { sendResetPasswordEmail, sendWelcomeEmail } from '../services/emailServi
 
 
 const generateRandomPassword = (): string => {
-    // Generate a random password with at least one uppercase, one lowercase, one number, and one special character
     const length = 12;
     const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
     let password = '';
-    
-    // Ensure at least one of each required character type
+
+
     password += 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'[Math.floor(Math.random() * 26)];
     password += 'abcdefghijklmnopqrstuvwxyz'[Math.floor(Math.random() * 26)];
     password += '0123456789'[Math.floor(Math.random() * 10)];
     password += '!@#$%^&*'[Math.floor(Math.random() * 8)];
-    
-    // Fill the rest with random characters
+
+
     for (let i = password.length; i < length; i++) {
         password += charset[Math.floor(Math.random() * charset.length)];
     }
-    
-    // Shuffle the password
+
     return password.split('').sort(() => Math.random() - 0.5).join('');
 };
 
 const loginPatient = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
         const { email, password } = req.body;
+        
         const patient = await Patient.findOne({ email });
 
         if (!patient || !(await patient.comparePassword(password))) {
@@ -43,7 +42,8 @@ const loginPatient = async (req: Request, res: Response, next: NextFunction): Pr
                 id: patient._id,
                 email: patient.email,
                 firstName: patient.firstName,
-                lastName: patient.lastName
+                lastName: patient.lastName,
+                assignedDoctor: patient.assignedDoctor
             }
         });
     } catch (error) {
@@ -60,12 +60,12 @@ const addPatient = async (req: Request, res: Response, next: NextFunction): Prom
         }
 
         const generatedPassword = generateRandomPassword();
-      
+
         const patientData = {
             ...req.body,
             password: generatedPassword
         };
-        
+
         const patient = new Patient(patientData);
         await patient.save();
 
@@ -95,7 +95,7 @@ const addPatient = async (req: Request, res: Response, next: NextFunction): Prom
 
 const getPatients = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-        const doctorId = (req as any).user.userId; // Assuming middleware sets this
+        const doctorId = (req as any).user.userId;
         const patients = await Patient.find({ assignedDoctor: doctorId })
             .select('-password -resetPasswordToken -resetPasswordExpires');
         res.json(patients);

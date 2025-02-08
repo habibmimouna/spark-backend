@@ -128,8 +128,9 @@ export const getDoctorAppointments = async (req: Request, res: Response): Promis
 };
 export const getPatientAppointments = async (req: Request, res: Response): Promise<void> => {
   try {
-    // Find the patient using the authenticated user's ID
-    const patient = await Patient.findOne({ _id: req.user?.userId });
+    console.log("eeeeeeeeeeee",req.user?.patientId);
+    
+    const patient = await Patient.findOne({ _id: req.user?.patientId });
     if (!patient) {
       res.status(404).json({ message: 'Patient not found' });
       return;
@@ -148,10 +149,12 @@ export const getPatientAppointments = async (req: Request, res: Response): Promi
 
 export const bookAppointment = async (req: Request, res: Response): Promise<void> => {
   try {
+    console.log("ffffff",req.body);
+    
     const { doctorId, time, treatment, duration, notes } = req.body;
     
     // Find the patient using the authenticated user's ID
-    const patient = await Patient.findOne({ _id: req.user?.userId });
+    const patient = await Patient.findOne({ _id: req.user?.patientId });
     if (!patient) {
       res.status(404).json({ message: 'Patient not found' });
       return;

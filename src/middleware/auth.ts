@@ -5,6 +5,7 @@ import jwt from 'jsonwebtoken';
 // Define interface for JWT payload
 interface JwtPayload {
   userId: string;
+  patientId:string;
   // add other properties that are in your JWT payload
 }
 
