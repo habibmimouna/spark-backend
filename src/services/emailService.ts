@@ -47,3 +47,40 @@ export const sendResetPasswordEmail = async (email: string, token: string) => {
     throw error;
   }
 };
+
+export const sendWelcomeEmail = async (
+  email: string,
+  firstName: string,
+  password: string
+) => {
+  try {
+    await transporter.verify();
+    console.log('SMTP connection verified successfully');
+
+    const loginUrl = 'http://localhost:5173/patient/login';
+
+    const mailOptions = {
+      from: process.env.SMTP_USER,
+      to: email,
+      subject: 'Welcome to Our Healthcare Platform',
+      html: `
+        <h1>Welcome to Our Healthcare Platform, ${firstName}!</h1>
+        <p>Your account has been successfully created. Here are your login credentials:</p>
+        <p><strong>Email:</strong> ${email}</p>
+        <p><strong>Password:</strong> ${password}</p>
+        <p>For security reasons, we recommend changing your password after your first login.</p>
+        <p>You can login to your account here:</p>
+        <a href="${loginUrl}">Login to Your Account</a>
+        <p>If you have any questions or need assistance, please don't hesitate to contact us.</p>
+        <p>Best regards,<br>Your Healthcare Team</p>
+      `
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    console.log('Welcome email sent:', info.response);
+    return info;
+  } catch (error) {
+    console.error('Error sending welcome email:', error);
+    throw error;
+  }
+};

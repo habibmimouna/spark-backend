@@ -1,7 +1,29 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import Patient from '../models/Patient';
-import { sendResetPasswordEmail } from '../services/emailService';
+import { sendResetPasswordEmail, sendWelcomeEmail } from '../services/emailService';
+
+
+const generateRandomPassword = (): string => {
+    // Generate a random password with at least one uppercase, one lowercase, one number, and one special character
+    const length = 12;
+    const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
+    let password = '';
+    
+    // Ensure at least one of each required character type
+    password += 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'[Math.floor(Math.random() * 26)];
+    password += 'abcdefghijklmnopqrstuvwxyz'[Math.floor(Math.random() * 26)];
+    password += '0123456789'[Math.floor(Math.random() * 10)];
+    password += '!@#$%^&*'[Math.floor(Math.random() * 8)];
+    
+    // Fill the rest with random characters
+    for (let i = password.length; i < length; i++) {
+        password += charset[Math.floor(Math.random() * charset.length)];
+    }
+    
+    // Shuffle the password
+    return password.split('').sort(() => Math.random() - 0.5).join('');
+};
 
 const loginPatient = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
@@ -36,12 +58,30 @@ const addPatient = async (req: Request, res: Response, next: NextFunction): Prom
             res.status(400).json({ message: 'Email already registered' });
             return;
         }
-        console.log("req.body",req.body);
+
+        // Generate a random password for the new patient
+        const generatedPassword = generateRandomPassword();
         
-
-        const patient = new Patient(req.body);
-
+        // Create the patient with the generated password
+        const patientData = {
+            ...req.body,
+            password: generatedPassword
+        };
+        
+        const patient = new Patient(patientData);
         await patient.save();
+
+        // Send welcome email with credentials
+        try {
+            await sendWelcomeEmail(
+                patient.email,
+                patient.firstName,
+                generatedPassword
+            );
+        } catch (emailError) {
+            console.error('Failed to send welcome email:', emailError);
+            // Continue with the response even if email fails
+        }
 
         res.status(201).json({
             message: 'Patient added successfully',
