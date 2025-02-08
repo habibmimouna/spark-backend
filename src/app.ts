@@ -3,6 +3,8 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const authRoutes = require('./routes/auth');
+const patientRoutes = require('./routes/patient');
+
 import appointmentRoutes from './routes/appointmentRoutes';
 
 dotenv.config();
@@ -23,6 +25,7 @@ mongoose.connect(process.env.MONGODB_URI!)
   });
 
 app.use('/api/auth', authRoutes); 
+app.use('/api/patient', patientRoutes);
 app.use('/api/appointments', appointmentRoutes); 
 
 const PORT = process.env.PORT || 3000;
