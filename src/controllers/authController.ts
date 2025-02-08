@@ -77,7 +77,7 @@ const resetPassword = async (req: Request, res: Response, next: NextFunction): P
 
         const token = crypto.randomBytes(32).toString('hex');
         user.resetPasswordToken = token;
-        user.resetPasswordExpires = new Date(Date.now() + 3600000); // 1 hour
+        user.resetPasswordExpires = new Date(Date.now() + 3600000); 
         await user.save();
 
         await sendResetPasswordEmail(email, token);

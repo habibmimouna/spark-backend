@@ -1,9 +1,9 @@
 import { Request, Response } from 'express';
 import { Appointment, IAppointment } from '../models/Appointment';
-import User from '../models/User';
-import Patient from '../models/Patient';
+import User, { IUser } from '../models/User';
+import Patient, { IPatient } from '../models/Patient';
+import { sendAppointmentStatusEmail } from '../services/emailService';
 
-// Define the structure of the request body for adding an appointment
 interface AddAppointmentRequest {
   time: string;
   patient: string;
@@ -11,12 +11,10 @@ interface AddAppointmentRequest {
   duration: string;
 }
 
-// Define the structure of the request body for updating an appointment
 interface UpdateAppointmentRequest {
   status?: 'Pending' | 'Accepted' | 'Rejected';
 }
 
-// Fetch all appointments
 export const getAppointments = async (req: Request, res: Response): Promise<void> => {
   try {
     const appointments = await Appointment.find();
@@ -28,14 +26,12 @@ export const getAppointments = async (req: Request, res: Response): Promise<void
   }
 };
 
-// Add a new appointment
 export const addAppointment = async (
   req: Request<{}, {}, AddAppointmentRequest>,
   res: Response
 ): Promise<void> => {
   const { time, patient, treatment, duration } = req.body;
 
-  // Validate request body
   if (!time || !patient || !treatment || !duration) {
     res.status(400).json({ message: 'All fields are required' });
     return;
@@ -47,19 +43,18 @@ export const addAppointment = async (
       patient,
       treatment,
       duration,
-      status: 'Pending', // Default status
+      status: 'Pending',
     });
 
     const newAppointment = await appointment.save();
-    res.status(201).json(newAppointment); // 201 Created
+    res.status(201).json(newAppointment);
   } catch (err: unknown) {
     const error = err as Error;
     console.error('Error adding appointment:', error.message);
-    res.status(500).json({ message: 'Internal server error' }); // 500 Internal Server Error
+    res.status(500).json({ message: 'Internal server error' });
   }
 };
 
-// Update an appointment (e.g., accept or reject)
 export const updateAppointment = async (
   req: Request<{ id: string }, {}, UpdateAppointmentRequest>,
   res: Response
@@ -80,7 +75,6 @@ export const updateAppointment = async (
       return;
     }
 
-    // Update the appointment status
     appointment.status = status;
     const updatedAppointment = await appointment.save();
 
@@ -119,7 +113,7 @@ export const getDoctorAppointments = async (req: Request, res: Response): Promis
     const appointments = await Appointment.find({ doctor: doctorId })
       .populate('patient', 'firstName lastName email phoneNumber')
       .sort({ time: 1 });
-    
+
     res.status(200).json(appointments);
   } catch (error) {
     console.error('Error fetching doctor appointments:', error);
@@ -128,8 +122,7 @@ export const getDoctorAppointments = async (req: Request, res: Response): Promis
 };
 export const getPatientAppointments = async (req: Request, res: Response): Promise<void> => {
   try {
-    console.log("eeeeeeeeeeee",req.user?.patientId);
-    
+
     const patient = await Patient.findOne({ _id: req.user?.patientId });
     if (!patient) {
       res.status(404).json({ message: 'Patient not found' });
@@ -139,7 +132,7 @@ export const getPatientAppointments = async (req: Request, res: Response): Promi
     const appointments = await Appointment.find({ patient: patient._id })
       .populate('doctor', 'firstName lastName medicalSpecialty')
       .sort({ time: 1 });
-    
+
     res.status(200).json(appointments);
   } catch (error) {
     console.error('Error fetching patient appointments:', error);
@@ -149,31 +142,26 @@ export const getPatientAppointments = async (req: Request, res: Response): Promi
 
 export const bookAppointment = async (req: Request, res: Response): Promise<void> => {
   try {
-    console.log("ffffff",req.body);
-    
+
     const { doctorId, time, treatment, duration, notes } = req.body;
-    
-    // Find the patient using the authenticated user's ID
+
     const patient = await Patient.findOne({ _id: req.user?.patientId });
     if (!patient) {
       res.status(404).json({ message: 'Patient not found' });
       return;
     }
 
-    // Validate doctor exists and is assigned to patient
     const doctor = await User.findById(doctorId);
     if (!doctor) {
       res.status(404).json({ message: 'Doctor not found' });
       return;
     }
 
-    // Verify this doctor is assigned to the patient
     if (patient.assignedDoctor.toString() !== doctorId) {
       res.status(403).json({ message: 'You can only book appointments with your assigned doctor' });
       return;
     }
 
-    // Check for time conflicts
     const conflictingAppointment = await Appointment.findOne({
       doctor: doctorId,
       time: new Date(time),
@@ -196,10 +184,9 @@ export const bookAppointment = async (req: Request, res: Response): Promise<void
     });
 
     await appointment.save();
-    
+
     const populatedAppointment = await appointment
       .populate('doctor', 'firstName lastName medicalSpecialty')
-      // .populate('patient', 'firstName lastName email phoneNumber');
 
     res.status(201).json(populatedAppointment);
   } catch (error) {
@@ -218,7 +205,8 @@ export const updateAppointmentStatus = async (req: Request, res: Response): Prom
     const appointment = await Appointment.findOne({
       _id: id,
       doctor: doctorId
-    }).populate('patient', 'firstName lastName email');
+    }).populate<{ patient: IPatient }>('patient', 'firstName lastName email')
+      .populate<{ doctor: IUser }>('doctor', 'firstName lastName');
 
     if (!appointment) {
       res.status(404).json({ message: 'Appointment not found' });
@@ -232,6 +220,25 @@ export const updateAppointmentStatus = async (req: Request, res: Response): Prom
 
     appointment.status = status;
     await appointment.save();
+    if (appointment.doctor?.firstName && appointment.patient) {
+
+      try {
+        const patientName = `${appointment.patient.firstName} ${appointment.patient.lastName}`;
+        const doctorName = `${appointment.doctor.firstName} ${appointment.doctor.lastName}`;
+
+        await sendAppointmentStatusEmail(
+          appointment.patient.email,
+          patientName,
+          doctorName,
+          appointment.time,
+          status as 'Accepted' | 'Rejected',
+          appointment.treatment
+        );
+      } catch (emailError) {
+        console.error('Failed to send appointment status email:', emailError);
+
+      }
+    }
 
     res.status(200).json(appointment);
   } catch (error) {

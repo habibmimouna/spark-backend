@@ -84,3 +84,65 @@ export const sendWelcomeEmail = async (
     throw error;
   }
 };
+
+export const sendAppointmentStatusEmail = async (
+  patientEmail: string,
+  patientName: string,
+  doctorName: string,
+  appointmentTime: Date,
+  status: 'Accepted' | 'Rejected',
+  treatment: string
+) => {
+  try {
+    await transporter.verify();
+    console.log('SMTP connection verified successfully');
+
+    const formattedDate = appointmentTime.toLocaleString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+
+    const subject = status === 'Accepted' 
+      ? 'Appointment Confirmed'
+      : 'Appointment Update';
+
+    const mailOptions = {
+      from: process.env.SMTP_USER,
+      to: patientEmail,
+      subject,
+      html: status === 'Accepted' 
+        ? `
+          <h1>Appointment Confirmed</h1>
+          <p>Dear ${patientName},</p>
+          <p>Your appointment has been confirmed with Dr. ${doctorName}.</p>
+          <p><strong>Details:</strong></p>
+          <ul>
+            <li>Date and Time: ${formattedDate}</li>
+            <li>Treatment: ${treatment}</li>
+          </ul>
+          <p>Please arrive 10 minutes before your scheduled appointment time.</p>
+          <p>If you need to reschedule or cancel, please contact us as soon as possible.</p>
+          <p>Best regards,<br>Your Healthcare Team</p>
+        `
+        : `
+          <h1>Appointment Update</h1>
+          <p>Dear ${patientName},</p>
+          <p>Unfortunately, your appointment request with Dr. ${doctorName} for ${formattedDate} could not be accommodated.</p>
+          <p>Please schedule a new appointment at your convenience.</p>
+          <p>We apologize for any inconvenience.</p>
+          <p>Best regards,<br>Your Healthcare Team</p>
+        `
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    console.log('Appointment status email sent:', info.response);
+    return info;
+  } catch (error) {
+    console.error('Error sending appointment status email:', error);
+    throw error;
+  }
+};

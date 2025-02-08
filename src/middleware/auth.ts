@@ -1,15 +1,11 @@
-// middleware/auth.ts
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 
-// Define interface for JWT payload
 interface JwtPayload {
   userId: string;
-  patientId:string;
-  // add other properties that are in your JWT payload
+  patientId: string;
 }
 
-// Extend the Request type to include user
 declare global {
   namespace Express {
     interface Request {

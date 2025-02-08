@@ -10,11 +10,9 @@ router.post('/', addAppointment);
 router.patch('/:id', updateAppointment);
 router.delete('/:id', deleteAppointment);
 
-// Doctor routes
 router.get('/doctor', getDoctorAppointments);
 router.patch('/:id/status', updateAppointmentStatus);
 
-// Patient routes
 router.get('/patient', getPatientAppointments);
 router.post('/book', bookAppointment);
 

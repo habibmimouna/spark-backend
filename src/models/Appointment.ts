@@ -16,15 +16,14 @@ const AppointmentSchema = new Schema<IAppointment>({
   time: { type: Date, required: true },
   treatment: { type: String, required: true },
   duration: { type: String, required: true },
-  status: { 
-    type: String, 
-    enum: ['Pending', 'Accepted', 'Rejected'], 
-    default: 'Pending' 
+  status: {
+    type: String,
+    enum: ['Pending', 'Accepted', 'Rejected'],
+    default: 'Pending'
   },
   notes: { type: String }
 }, { timestamps: true });
 
-// Add index for efficient querying
 AppointmentSchema.index({ doctor: 1, time: 1 });
 AppointmentSchema.index({ patient: 1, time: 1 });
 
