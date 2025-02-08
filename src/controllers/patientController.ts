@@ -59,10 +59,8 @@ const addPatient = async (req: Request, res: Response, next: NextFunction): Prom
             return;
         }
 
-        // Generate a random password for the new patient
         const generatedPassword = generateRandomPassword();
-        
-        // Create the patient with the generated password
+      
         const patientData = {
             ...req.body,
             password: generatedPassword
@@ -71,7 +69,6 @@ const addPatient = async (req: Request, res: Response, next: NextFunction): Prom
         const patient = new Patient(patientData);
         await patient.save();
 
-        // Send welcome email with credentials
         try {
             await sendWelcomeEmail(
                 patient.email,
@@ -80,7 +77,6 @@ const addPatient = async (req: Request, res: Response, next: NextFunction): Prom
             );
         } catch (emailError) {
             console.error('Failed to send welcome email:', emailError);
-            // Continue with the response even if email fails
         }
 
         res.status(201).json({
